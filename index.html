@@ -1,7 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="manifest" href="manifest.json">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(reg) {
+          console.log("✅ Service Worker registered!", reg.scope);
+        }).catch(function(error) {
+          console.log("❌ Service Worker registration failed:", error);
+        });
+    }
+  </script>
+
+
   <title>Attendance Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
