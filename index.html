@@ -47,6 +47,21 @@
     }
   </style>
 </head>
+
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(function(reg) {
+        console.log("✅ Service Worker registered!", reg.scope);
+      }).catch(function(error) {
+        console.log("❌ Service Worker registration failed:", error);
+      });
+  }
+</script>
+
+
+
 <body>
 
   <h2>Attendance Tracker</h2>
