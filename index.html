@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attendance Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 12px;
+      background-color: #f2f2f2;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    h2, h3 {
+      text-align: center;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Attendance Tracker</h2>
+
+  <label for="site">Site Name</label>
+  <select id="site" onchange="updateNames()">
+    <option value="">Select Site</option>
+    <option value="AkilaTeam">AkilaTeam</option>
+    <option value="CholaTeam">CholaTeam</option>
+    <option value="BhanuTeam">BhanuTeam</option>
+    <option value="JananiTeam">JananiTeam</option>
+    <option value="Supervisor">Supervisor</option>
+  </select>
+
+  <label for="name">Employee Name</label>
+  <select id="name" onchange="filterByEmployee()">
+    <option value="">Select Name</option>
+  </select>
+
+  <label for="inout">In/Out</label>
+  <select id="inout">
+    <option value="">Select In/Out</option>
+    <option value="In">In</option>
+    <option value="Out">Out</option>
+  </select>
+
+  <!-- Hidden Fields -->
+  <input id="date" readonly hidden>
+  <input id="time" readonly hidden>
+  <input id="reason" value="." hidden>
+  <input id="approvedBy" value="." hidden>
+
+  <button onclick="addEntry();">➕ Add Entry</button>
+  <button onclick="loadToday()">📅 Show Today's All Entries</button>
+
+  <table id="empTable">
+    <thead>
+      <tr>
+        <th>Site</th><th>Name</th><th>Entry Date</th><th>In/Out</th><th>IO Date</th><th>Time</th><th>Reason</th><th>Approved By</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function setCurrentDateTime() {
+      const now = new Date();
+      document.getElementById("date").value = now.toISOString().slice(0, 10);
+      document.getElementById("time").value = now.toTimeString().slice(0, 5);
+    }
+    setCurrentDateTime();
+
+    const siteMembers = {
+      "AkilaTeam": ["Aarthi M", "Vinitha M", "Vinodhini S", "Swetha V", "Akila V"],
+      "CholaTeam": ["Sabitha M", "Monika M", "Sharmila S", "Shnmughpriya M"],
+      "BhanuTeam": ["Soniya K", "Ilakkiya M", "Bhanumathi V", "Revathi D", "Bhavani D", "Jeevitha V", "Swapna N", "Lakshmi R"],
+      "JananiTeam": ["Asin S", "Deepika T", "Renuka P", "Sowmiya S", "Janani V INV"],
+      "Supervisor": ["Vinoth V"]
+    };
+
+    function updateNames() {
+      const site = document.getElementById("site").value;
+      const nameSelect = document.getElementById("name");
+      nameSelect.innerHTML = '<option value="">Select Name</option>';
+      if (siteMembers[site]) {
+        siteMembers[site].forEach(n => {
+          const opt = document.createElement("option");
+          opt.value = n;
+          opt.text = n;
+          nameSelect.appendChild(opt);
+        });
+      }
+    }
+
+    async function addEntry() {
+      setCurrentDateTime();
+      const site_name = document.getElementById("site").value;
+      const employee_name = document.getElementById("name").value;
+      const entry_date = document.getElementById("date").value;
+      const in_out = document.getElementById("inout").value;
+      const io_date = entry_date;
+      const io_time = document.getElementById("time").value;
+      const reason = document.getElementById("reason").value;
+      const approved_by = document.getElementById("approvedBy").value;
+
+      if (!site_name || !employee_name || !in_out) {
+        alert("⚠️ Please select all fields");
+        return;
+      }
+
+      const res = await fetch("https://attendance-826a.onrender.com/add/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          site_name, employee_name, entry_date, in_out,
+          io_date, io_time, reason, approved_by
+        })
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+
+         filterByEmployee();
+         alert("Success");
+      } else {
+        alert("❌ Error: " + (result.detail || JSON.stringify(result)));
+      }
+    }
+
+    async function loadToday() {
+      const res = await fetch("https://attendance-826a.onrender.com/view/");
+      const data = await res.json();
+      const today = new Date().toISOString().slice(0, 10);
+      const tbody = document.querySelector("#empTable tbody");
+      tbody.innerHTML = "";
+
+      data.attendance
+        .filter(e => e.entry_date === today)
+        .forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.site_name}</td>
+            <td>${row.employee_name}</td>
+            <td>${row.entry_date}</td>
+            <td>${row.in_out}</td>
+            <td>${row.io_date}</td>
+            <td>${row.io_time}</td>
+            <td>${row.reason}</td>
+            <td>${row.approved_by}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+    }
+
+    async function filterByEmployee() {
+      const name = document.getElementById("name").value;
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch("https://attendance-826a.onrender.com/view/");
+      const data = await res.json();
+
+      const tbody = document.querySelector("#empTable tbody");
+      tbody.innerHTML = "";
+
+      data.attendance
+        .filter(e => e.entry_date === today && e.employee_name === name)
+        .forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.site_name}</td>
+            <td>${row.employee_name}</td>
+            <td>${row.entry_date}</td>
+            <td>${row.in_out}</td>
+            <td>${row.io_date}</td>
+            <td>${row.io_time}</td>
+            <td>${row.reason}</td>
+            <td>${row.approved_by}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+    }
+  </script>
+
+</body>
+</html>
